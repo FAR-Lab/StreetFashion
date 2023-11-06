@@ -1,0 +1,1 @@
+PALETTE_OUTPUT_DIR = '/share/ju/StreetFashion/output/palettes'

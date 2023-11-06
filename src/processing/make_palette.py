@@ -38,6 +38,11 @@ from skimage import color
 from skimage import data
 from sklearn.cluster import KMeans
 
+from datetime import datetime
+
+import asyncio
+import aiofiles
+
 # Class Definition
 
 
@@ -72,7 +77,10 @@ class ColorPalette:
         return color_array
 
     def __init__(self):
+        self.log = setup_logger("color_palette")
+
         # self.image = empty numpy array
+        self.id = None
         self.image = None
         self.pixels = None
 
@@ -86,19 +94,21 @@ class ColorPalette:
         self.palette_arr = []
         self.palettecounts_arr = []
 
-    def load_image(self, image_path: str):
+    async def load_image(self, image_path: str):
         """
         loads image from path
         :param image_path: str
         """
+        self.id = image_path.split("/")[-1].split(".")[0]
 
-        self.image = cv2.imread(image_path)
-        self.image = np.array(self.image)
-        self.image = cv2.cvtColor(
-            self.image, cv2.COLOR_BGR2RGB
-        )  # making sure the colors show up correctly when we plot it
-
-        self.pixels = np.float32(self.image).reshape(-1, 3)
+        async with aiofiles.open(image_path, mode="rb") as f:
+            # read image asynchronosly with cv2
+            self.image = await f.read()
+            self.image = np.frombuffer(self.image, dtype=np.uint8)
+            self.image = cv2.imdecode(self.image, cv2.IMREAD_COLOR)
+            self.image = np.array(self.image)
+            self.image = cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
+            self.pixels = np.float32(self.image).reshape(-1, 3)
 
     def apply_kmeans(self):
         ## step 1: assign the values of pixels to bins of 1-16 for R,G,B and create histogram
@@ -175,8 +185,11 @@ class ColorPalette:
             np.sum(self.kmlabels_ == 3),
             np.sum(self.kmlabels_ == 4),
         ]
-        print("Palette counts:", self.palettecounts)
-        print(self.kmcluster_centers_, self.pixels, self.palettecounts)
+        self.log.debug(f"Palette counts: {self.palettecounts}")
+        self.log.debug(self.kmcluster_centers_)
+        self.log.debug(self.kmlabels_)
+        self.log.debug(self.pixels)
+
         # palette=np.uint8([rgb_cluster_centers])
         self.palette_arr.append(np.uint8(self.kmcluster_centers_))
         self.palettecounts_arr.append(np.uint8(self.palettecounts))
@@ -200,17 +213,26 @@ class ColorPalette:
             L, a, b, c=self.rgbarr_r, s=self.countsarr * 6, alpha=0.5
         )  # use c=label for cluster colors
         # plotting the centers too
-        Lc, ac, bc = (
-            self.kmcluster_centers_[:, 0],
-            self.kmcluster_centers_[:, 1],
-            self.kmcluster_centers_[:, 2],
-        )
+        try:
+            Lc, ac, bc = (
+                self.kmcluster_centers_[:, 0],
+                self.kmcluster_centers_[:, 1],
+                self.kmcluster_centers_[:, 2],
+            )
+        except TypeError as e:
+            self.log.error(e)
+            return
+
         ax.scatter(Lc, ac, bc, marker="*", c="red", s=100, alpha=1)
         ax.set_xlabel("L")
         ax.set_ylabel("a")
         ax.set_zlabel("b")
         plt.grid()
-        plt.show()
+        now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        plt.savefig(f"{PALETTE_OUTPUT_DIR}/3dPlot_{self.id}_{now}.png")
+
+        plt.close()
+        plt.clf()
 
     def plot_seg_palette(self):
 
@@ -225,18 +247,19 @@ class ColorPalette:
         palette = np.uint8([rgb_cluster_centers])
         self.palette_arr.append(np.uint8(rgb_cluster_centers))
         self.palettecounts_arr.append(np.uint8(self.palettecounts))
-        ### plotting original filtered segment and dominant colors
 
-        # if vis_seg_palette=='false': #skip this function if the user specified not to visualize seg + pal
-        #    return
         fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(3, 3))
-        ax0.imshow(img)
+        ax0.imshow(self.image)
         ax0.set_title("Human")
         ax0.axis("off")
         ax1.imshow(palette)
         ax1.set_title("Palette")
         ax1.axis("off")
-        plt.show(fig)
+        now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        plt.savefig(f"{PALETTE_OUTPUT_DIR}/SegPalette_{self.id}_{now}.png")
+
+        plt.close()
+        plt.clf()
 
     def plot_img_palette(self):
         fig, (ax0) = plt.subplots(1, 1)
@@ -245,4 +268,17 @@ class ColorPalette:
         ax0.axis("off")
         fig.set_figwidth(1)
         fig.set_figheight(len(self.palette_arr))
-        plt.show(fig)
+        now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        plt.savefig(f"{PALETTE_OUTPUT_DIR}/ImgPalette_{self.id}_{now}.png")
+
+        plt.close()
+        plt.clf()
+
+    async def __call__(self, image_path: str):
+        await self.load_image(image_path)
+        self.apply_kmeans()
+        self.make_3d_plot()
+        self.plot_seg_palette()
+        self.plot_img_palette()
+
+        return self.palette_arr, self.palettecounts_arr
