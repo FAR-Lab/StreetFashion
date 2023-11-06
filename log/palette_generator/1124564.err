@@ -1,0 +1,24 @@
+2023-11-06 14:59:40 - palette_generator - INFO - Found 6002 images in /share/ju/urbanECG/output/6k_peds
+2023-11-06 14:59:40 - palette_generator - INFO - Starting palette generation...
+/share/ju/StreetFashion/drivers/../src/processing/make_palette.py:278: RuntimeWarning: More than 20 figures have been opened. Figures created through the pyplot interface (`matplotlib.pyplot.figure`) are retained until explicitly closed and may consume too much memory. (To control this warning, see the rcParam `figure.max_open_warning`). Consider using `matplotlib.pyplot.close()`.
+  fig, (ax0) = plt.subplots(1, 1)
+Traceback (most recent call last):
+  File "/share/ju/StreetFashion/drivers/palette_generator.py", line 23, in <module>
+    palette_arrs, palettecount_arrs = asyncio.run(palette_generator())
+  File "/share/ju/conda_virtualenvs/streetfashion/lib/python3.9/asyncio/runners.py", line 44, in run
+    return loop.run_until_complete(main)
+  File "/share/ju/conda_virtualenvs/streetfashion/lib/python3.9/asyncio/base_events.py", line 647, in run_until_complete
+    return future.result()
+  File "/share/ju/StreetFashion/drivers/../src/processing/palette_generator_batch.py", line 63, in __call__
+    results = await asyncio.gather(*tasks)
+  File "/share/ju/StreetFashion/drivers/../src/processing/make_palette.py", line 307, in __call__
+    await self.load_image(image_path)
+  File "/share/ju/StreetFashion/drivers/../src/processing/make_palette.py", line 106, in load_image
+    async with aiofiles.open(image_path, mode="rb") as f:
+  File "/share/ju/conda_virtualenvs/streetfashion/lib/python3.9/site-packages/aiofiles/base.py", line 78, in __aenter__
+    self._obj = await self._coro
+  File "/share/ju/conda_virtualenvs/streetfashion/lib/python3.9/site-packages/aiofiles/threadpool/__init__.py", line 80, in _open
+    f = yield from loop.run_in_executor(executor, cb)
+  File "/share/ju/conda_virtualenvs/streetfashion/lib/python3.9/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+OSError: [Errno 24] Too many open files: '/share/ju/urbanECG/output/6k_peds/b1395085aefb079693f37f15c983ba07_9.png'

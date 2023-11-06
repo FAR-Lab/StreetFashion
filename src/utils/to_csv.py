@@ -11,19 +11,29 @@ import pandas as pd
 import logging 
 import time
 import datetime
+import functools
 
+sys.path.append(os.path.join(".."))
+sys.path.append(os.path.join("..", ".."))
 
-def to_csv(func):
+from user.params.io import PALETTE_OUTPUT_DIR_PRE_AGG
 
-    def wrap_func(*args, **kwargs):
+def to_csv(prefix): 
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
 
-        now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            # make sure the output directory exists
+            os.makedirs(f"{PALETTE_OUTPUT_DIR_PRE_AGG}/{prefix}", exist_ok=True)
 
-        result = func(*args, **kwargs)
-        if isinstance(result, pd.DataFrame):
-            result.to_csv(f'{now}_{func.__name__}.csv', index=False)
-        else:
-            logging.error(f'Function {func.__name__!r} did not return a pandas DataFrame.')
-        return result
+            now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-    return wrap_func
+            result = func(*args, **kwargs)
+            if isinstance(result, pd.DataFrame):
+                result.to_csv(f'{PALETTE_OUTPUT_DIR_PRE_AGG}/{prefix}/{now}_{func.__name__}.csv', index=False)
+            else:
+                logging.error(f'Function {func.__name__!r} did not return a pandas DataFrame.')
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
+

@@ -1,0 +1,3 @@
+2023-11-06 14:59:11 - palette_generator - INFO - Found 6002 images in /share/ju/urbanECG/output/6k_peds
+2023-11-06 14:59:11 - palette_generator - INFO - Starting palette generation...
+slurmstepd: error: *** JOB 1124562 ON ju-compute-01 CANCELLED AT 2023-11-06T14:59:22 ***

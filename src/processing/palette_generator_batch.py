@@ -22,8 +22,9 @@ from src.utils.to_csv import to_csv
 
 from src.processing.make_palette import ColorPalette
 
-from user.params.io import PALETTE_OUTPUT_DIR
+from user.params.io import PALETTE_OUTPUT_DIR_PRE_AGG
 
+from random import shuffle 
 
 class PaletteGenerator:
     def __init__(self, image_dir):
@@ -31,9 +32,15 @@ class PaletteGenerator:
         self.log.setLevel("INFO")
 
         self.image_dir = image_dir
-        self.images = glob(os.path.join(self.image_dir, "*.png"))[:40]
+        self.images = glob(os.path.join(self.image_dir, "*.png"))
+
+        # shuffle the images
+        shuffle(self.images)
 
         self.log.info(f"Found {len(self.images)} images in {self.image_dir}")
+
+        # make sure the output directory exists
+        os.makedirs(PALETTE_OUTPUT_DIR_PRE_AGG, exist_ok=True)
 
     def generate_palette(self, image_path):
         """
@@ -44,7 +51,6 @@ class PaletteGenerator:
         palette = ColorPalette()
         return palette(image_path)
 
-    @to_csv
     async def __call__(self):
         self.log.info("Starting palette generation...")
 
@@ -58,5 +64,7 @@ class PaletteGenerator:
 
         # Convert the results to a datafram
         palette_arrs, palettecount_arrs = zip(*results)
+
+        self.log.success("Finished palette generation.")
 
         return palette_arrs, palettecount_arrs
